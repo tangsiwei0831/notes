@@ -177,3 +177,38 @@
   you, but you can always blindly rm it again (if it's really the same file).
 
 </details>
+
+<br>
+<h1>WebSocket & Concurrency</h1>
+<details>
+From a user’s point of view, a WebSocket is:
+<li>A bi-directional, full-duplex channel.</li>
+<li>Message-based instead of a byte stream.</li>
+<li>An extension to existing HTTP servers.</li>
+
+<h2>Handshake</h2>
+<li>To prove that the server understands WebSocket.</li>
+<li>To prevent non-WebSocket clients from creating WebSockets by forbiding the Sec-*
+header fields.</li>
+<li>To prevent caching proxies from caching WebSocket data by using random values.</li>
+
+<h2>Race Conditions</h2>
+Writing 1 message involves 2 socket writes, and the code yields to the
+runtime at each await statement. The problem is that while back to the runtime, the
+runtime may schedule another task that is also sending a message, resulting in interleaved
+socket writes.
+
+<h2>Atomic Operations</h2>
+One solution is to use a lock (mutex) to limit concurrent writes to the socket.
+<br><br>
+A mutex is “mutual exclusion” because it disallows more than one task from entering the
+locked state. In the case of concurrent access, one task holds the lock and the rest block on
+the await statement, and releasing the lock will unblock one of the waiters. The mutex is
+one of the synchronization primitives in many concurrent programming environments.
+<br><br>
+Another solution to preventing concurrent access is to use a queue. The queue accepts
+WebSocket messages from concurrent producers, and a dedicated task consumes from the
+queue and writes to the socket. This is what we will do.
+<br><br>
+A mutex is also a form of queue that doesn’t pass data, it passes control instead.
+</details>
