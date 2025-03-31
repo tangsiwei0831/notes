@@ -7,6 +7,8 @@ Reach out to me if you need any resource.
 
 [HTTP-server](./HTTP-server.md): [Build Your Own Web Server From Scratch In Node.JS](https://build-your-own.org/webserver/)
 
+[C programming introduction](./Introductory-C-Programming-Specialization/): [Introductory C Programming Specialization](https://www.coursera.org/specializations/c-programming#courses)
+
 ## Resources
 1. [Github Action tutorial](https://www.youtube.com/watch?v=TLB5MY9BBa4)
 
