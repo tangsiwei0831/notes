@@ -5,6 +5,8 @@ Reference:
 
 2. https://github.com/AhmedGharib0014/Programming-Fundamentals-c-course-by-Duke-university
 
+3. https://github.com/sairohithpasham/C-programming-course/tree/22edc87d5b54f9258e959783ab43001d8c1b1195
+
 # GDB command
 
 start: Begin (or restart) the program’s execution. Stop the program (to accept more commands) as soon as execution enters main.
@@ -22,3 +24,57 @@ display: The display command takes an expression as an argument, and displays it
 If you hit enter without entering any command, gdb will repeat the last command you entered. This feature is most useful when you want to use step or next multiple times in a row.
 
 Note that if you need to pass command line arguments to your program, you can either write them after the start or run command (e.g., run someArg anotherArg), or you can use set args to set the command line arguments.
+
+# Valgrind
+## Memcheck
+Each line that starts with ==11907==  here is part of the output of Valgrind.
+
+`valgrind ./myProgram hello 42`
+
+## Uninitialized Values
+`valgrind --track-origins=yes ./myProgram`
+
+## Invalid reads and writes
+Using -fsanitize=address can find a lot of problems of this type that Memcheck cannot. The reason is that -fsanitize=address forces extra unused locations between variables and marks them unreadable with the validity bits it uses. Because there is now space invalid space between the variables, the checks inserted by -fsanitize=address will detect accesses in between them, such as going out of the bounds of one array.
+
+## Valgrind with GDB
+If we run Valgrind with the options `--vgdb=full --vgdb-error=0`, then Valgrind will stop on the first error it encounters and give control to GDB. Some coordination is required to get GDB connected to Valgrind (they run as separate processes); however, when run with those options, Valgrind will give us the information we need to pass to GDB to make this happen:
+```
+==24099== (action at startup) vgdb me ...
+==24099==
+==24099== TO DEBUG THIS PROCESS USING GDB: start GDB like this
+==24099==   /path/to/gdb ./a.out
+==24099== and then give GDB the following command
+==24099==   target remote | /usr/lib/valgrind/../../bin/vgdb --pid=24099
+==24099== --pid is optional if only one valgrind process is running
+```
+At this point, Valgrind has started the program, but not yet entered main—it is waiting for you to start GDB and connect it to Valgrind. We can do so by running GDB (in a separate terminal, or Emacs buffer) and then copying and pasting the target command that Valgrind gave us into GDB's command prompt:
+```
+(gdb) target remote | /usr/lib/valgrind/../../bin/vgdb --pid=24099
+Remote debugging using | /usr/lib/valgrind/../../bin/vgdb --pid=24099
+relaying data between gdb and process 24099
+Reading symbols from /lib64/ld-linux-x86-64.so.2...Reading symbols from ...
+done.
+Loaded symbols for /lib64/ld-linux-x86-64.so.2
+0x00000000040012d0 in _start () from /lib64/ld-linux-x86-64.so.2
+(gdb)
+```
+
+The combination of Valgrind and GDB is quite powerful and gives you the ability to run some new commands, via the monitor command. For example, if we are trying to debug pointer-related errors and want to know what variables still point at a particular memory location, we can do so using the monitor who_points_at command:
+
+```
+gdb) monitor who_points_at 0x51fc040
+==24303== Searching for pointers to 0x51fc040
+==24303== *0xfff000450 points at 0x51fc040
+==24303==  Location 0xfff000450 is 0 bytes inside local var "p"
+==24303==  declared at example.c:6, in frame #0 of thread 1
+```
+There are many other monitor commands available for Memcheck. See 
+http://valgrind.org/docs/manual/mc-manual.html#mc-manual.monitor-commands
+for more information about available monitor commands and their arguments.
+
+
+## Memory Leak
+Valgrind’s Memcheck will also check for memory leaks. However, by default it only reports a summary of the leaks, which is not useful for finding and fixing the problems. If you have memory leaks, you will want to run with the `--leak-check=full` option. When you do so, Memcheck will report the location of each allocation which was not freed. You can then use this information to figure out where you should free that memory.
+
+Note that when running Valgrind's Memcheck with GDB, you can run the leak checker at any time with the monitor command `monitor leak_check full reachable any`.
